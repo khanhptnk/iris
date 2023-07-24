@@ -3,7 +3,7 @@ Credits to https://github.com/CompVis/taming-transformers
 """
 
 from dataclasses import dataclass
-from typing import Any, Tuple
+from typing import Any, Tuple, List
 
 from einops import rearrange
 import torch
@@ -23,8 +23,17 @@ class TokenizerEncoderOutput:
 
 
 class Tokenizer(nn.Module):
-    def __init__(self, vocab_size: int, embed_dim: int, encoder: Encoder, decoder: Decoder, with_lpips: bool = True) -> None:
+    def __init__(
+        self,
+        input_shape: int,
+        vocab_size: int,
+        embed_dim: int,
+        encoder: Encoder,
+        decoder: Decoder,
+        with_lpips: bool = True,
+    ) -> None:
         super().__init__()
+        self.input_shape = tuple(input_shape)
         self.vocab_size = vocab_size
         self.encoder = encoder
         self.pre_quant_conv = torch.nn.Conv2d(encoder.config.z_channels, embed_dim, 1)
@@ -37,7 +46,12 @@ class Tokenizer(nn.Module):
     def __repr__(self) -> str:
         return "tokenizer"
 
-    def forward(self, x: torch.Tensor, should_preprocess: bool = False, should_postprocess: bool = False) -> Tuple[torch.Tensor]:
+    def forward(
+        self,
+        x: torch.Tensor,
+        should_preprocess: bool = False,
+        should_postprocess: bool = False,
+    ) -> Tuple[torch.Tensor]:
         outputs = self.encode(x, should_preprocess)
         decoder_input = outputs.z + (outputs.z_quantized - outputs.z).detach()
         reconstructions = self.decode(decoder_input, should_postprocess)
@@ -45,21 +59,33 @@ class Tokenizer(nn.Module):
 
     def compute_loss(self, batch: Batch, **kwargs: Any) -> LossWithIntermediateLosses:
         assert self.lpips is not None
-        observations = self.preprocess_input(rearrange(batch['observations'], 'b t c h w -> (b t) c h w'))
-        z, z_quantized, reconstructions = self(observations, should_preprocess=False, should_postprocess=False)
+        observations = self.preprocess_input(
+            rearrange(batch["observations"], "b t c h w -> (b t) c h w")
+        )
+        z, z_quantized, reconstructions = self(
+            observations, should_preprocess=False, should_postprocess=False
+        )
 
         # Codebook loss. Notes:
         # - beta position is different from taming and identical to original VQVAE paper
         # - VQVAE uses 0.25 by default
         beta = 1.0
-        commitment_loss = (z.detach() - z_quantized).pow(2).mean() + beta * (z - z_quantized.detach()).pow(2).mean()
+        commitment_loss = (z.detach() - z_quantized).pow(2).mean() + beta * (
+            z - z_quantized.detach()
+        ).pow(2).mean()
 
         reconstruction_loss = torch.abs(observations - reconstructions).mean()
         perceptual_loss = torch.mean(self.lpips(observations, reconstructions))
 
-        return LossWithIntermediateLosses(commitment_loss=commitment_loss, reconstruction_loss=reconstruction_loss, perceptual_loss=perceptual_loss)
+        return LossWithIntermediateLosses(
+            commitment_loss=commitment_loss,
+            reconstruction_loss=reconstruction_loss,
+            perceptual_loss=perceptual_loss,
+        )
 
-    def encode(self, x: torch.Tensor, should_preprocess: bool = False) -> TokenizerEncoderOutput:
+    def encode(
+        self, x: torch.Tensor, should_preprocess: bool = False
+    ) -> TokenizerEncoderOutput:
         if should_preprocess:
             x = self.preprocess_input(x)
         shape = x.shape  # (..., C, H, W)
@@ -67,11 +93,17 @@ class Tokenizer(nn.Module):
         z = self.encoder(x)
         z = self.pre_quant_conv(z)
         b, e, h, w = z.shape
-        z_flattened = rearrange(z, 'b e h w -> (b h w) e')
-        dist_to_embeddings = torch.sum(z_flattened ** 2, dim=1, keepdim=True) + torch.sum(self.embedding.weight**2, dim=1) - 2 * torch.matmul(z_flattened, self.embedding.weight.t())
+        z_flattened = rearrange(z, "b e h w -> (b h w) e")
+        dist_to_embeddings = (
+            torch.sum(z_flattened**2, dim=1, keepdim=True)
+            + torch.sum(self.embedding.weight**2, dim=1)
+            - 2 * torch.matmul(z_flattened, self.embedding.weight.t())
+        )
 
         tokens = dist_to_embeddings.argmin(dim=-1)
-        z_q = rearrange(self.embedding(tokens), '(b h w) e -> b e h w', b=b, e=e, h=h, w=w).contiguous()
+        z_q = rearrange(
+            self.embedding(tokens), "(b h w) e -> b e h w", b=b, e=e, h=h, w=w
+        ).contiguous()
 
         # Reshape to original
         z = z.reshape(*shape[:-3], *z.shape[1:])
@@ -80,7 +112,9 @@ class Tokenizer(nn.Module):
 
         return TokenizerEncoderOutput(z, z_q, tokens)
 
-    def decode(self, z_q: torch.Tensor, should_postprocess: bool = False) -> torch.Tensor:
+    def decode(
+        self, z_q: torch.Tensor, should_postprocess: bool = False
+    ) -> torch.Tensor:
         shape = z_q.shape  # (..., E, h, w)
         z_q = z_q.view(-1, *shape[-3:])
         z_q = self.post_quant_conv(z_q)
@@ -91,7 +125,23 @@ class Tokenizer(nn.Module):
         return rec
 
     @torch.no_grad()
-    def encode_decode(self, x: torch.Tensor, should_preprocess: bool = False, should_postprocess: bool = False) -> torch.Tensor:
+    def decode_obs_tokens(self, obs_tokens) -> torch.FloatTensor:
+        embedded_tokens = self.embedding(obs_tokens)  # (B, K, E)
+        z = rearrange(
+            embedded_tokens,
+            "b (h w) e -> b e h w",
+            h=int(np.sqrt(obs_tokens.shape[-1])),
+        )
+        rec = self.decode(z, should_postprocess=True)  # (B, C, H, W)
+        return torch.clamp(rec, 0, 1)
+
+    @torch.no_grad()
+    def encode_decode(
+        self,
+        x: torch.Tensor,
+        should_preprocess: bool = False,
+        should_postprocess: bool = False,
+    ) -> torch.Tensor:
         z_q = self.encode(x, should_preprocess).z_quantized
         return self.decode(z_q, should_postprocess)
 
@@ -102,3 +152,78 @@ class Tokenizer(nn.Module):
     def postprocess_output(self, y: torch.Tensor) -> torch.Tensor:
         """y is supposed to be channels first and in [-1, 1]"""
         return y.add(1).div(2)
+
+    @property
+    def device(self):
+        return self.embedding.weight.device
+
+
+class DummyMessengerTokenizer(Tokenizer):
+    offset = {"entity": 0, "id": 4, "row": 21, "col": 31}
+
+    def compute_loss(self, batch: Batch, **kwargs: Any) -> LossWithIntermediateLosses:
+        id = torch.arange(self.vocab_size).to(self.device)
+        embed = self.embedding(id)
+        loss = embed.sum() * 0
+        return LossWithIntermediateLosses(
+            commitment_loss=loss, reconstruction_loss=loss, perceptual_loss=loss
+        )
+
+    def encode(
+        self, x: torch.Tensor, should_preprocess: bool = False
+    ) -> TokenizerEncoderOutput:
+        device = self.embedding.weight.device
+        z = torch.zeros(0).to(device)
+        z_q = torch.zeros(0).to(device)
+
+        shape = x.shape  # (..., C, H, W)
+        x = x.view(-1, *shape[-3:])
+        b, c, h, w = x.shape
+        id, loc = x.contiguous().view(b, c, -1).max(-1)
+        row = torch.div(loc + 1e-6, h, rounding_mode="trunc")
+        col = loc % h
+        row[id == 0] = 0
+        col[id == 0] = 0
+        ent = torch.arange(c).to(device).view(1, c).expand_as(id)
+
+        tokens = []
+        for i in range(c):
+            tokens.extend(
+                [
+                    ent[..., i] + self.offset["entity"],
+                    id[..., i] + self.offset["id"],
+                    row[..., i] + self.offset["row"],
+                    col[..., i] + self.offset["col"],
+                ]
+            )
+        tokens = torch.stack(tokens, dim=1).long()
+        tokens = tokens.reshape(*shape[:-3], -1)
+
+        return TokenizerEncoderOutput(z, z_q, tokens)
+
+    @torch.no_grad()
+    def decode_obs_tokens(self, obs_tokens) -> torch.FloatTensor:
+        obs = (
+            torch.zeros((obs_tokens.shape[0],) + self.input_shape)
+            .to(self.device)
+            .long()
+        )
+        n_channels = self.input_shape[0]
+        for i in range(n_channels):
+            id = obs_tokens[:, i * n_channels + 1] - self.offset["id"]
+            id = torch.clamp(id, 0, 16)
+            row = obs_tokens[:, i * n_channels + 2] - self.offset["row"]
+            row = torch.clamp(row, 0, 9)
+            col = obs_tokens[:, i * n_channels + 3] - self.offset["col"]
+            col = torch.clamp(col, 0, 9)
+            obs[torch.arange(obs.shape[0]), i, row, col] = id
+        return obs
+
+    @torch.no_grad()
+    def encode_decode(
+        self,
+        x: torch.Tensor,
+        should_preprocess: bool = False,
+        should_postprocess: bool = False,
+    ) -> torch.Tensor:
+        return x

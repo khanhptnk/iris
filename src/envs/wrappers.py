@@ -3,15 +3,35 @@ Credits to https://github.com/openai/baselines/blob/master/baselines/common/atar
 """
 
 from typing import Tuple
+import json
+import random
+import numpy as np
 
+import messenger
 import gym
 import numpy as np
 from PIL import Image
 
 
-def make_atari(id, size=64, max_episode_steps=None, noop_max=30, frame_skip=4, done_on_life_loss=False, clip_reward=False):
+def make_messenger(id, max_episode_steps=None, split=None, seed=None):
+    env = gym.make(id, shuffle_obs=False)
+    if max_episode_steps is not None:
+        env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
+    env = MessengerSplitEnv(env, split, seed)
+    return env
+
+
+def make_atari(
+    id,
+    size=64,
+    max_episode_steps=None,
+    noop_max=30,
+    frame_skip=4,
+    done_on_life_loss=False,
+    clip_reward=False,
+):
     env = gym.make(id)
-    assert 'NoFrameskip' in env.spec.id or 'Frameskip' not in env.spec
+    assert "NoFrameskip" in env.spec.id or "Frameskip" not in env.spec
     env = ResizeObsWrapper(env, (size, size))
     if clip_reward:
         env = RewardClippingWrapper(env)
@@ -29,7 +49,9 @@ class ResizeObsWrapper(gym.ObservationWrapper):
     def __init__(self, env: gym.Env, size: Tuple[int, int]) -> None:
         gym.ObservationWrapper.__init__(self, env)
         self.size = tuple(size)
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(size[0], size[1], 3), dtype=np.uint8)
+        self.observation_space = gym.spaces.Box(
+            low=0, high=255, shape=(size[0], size[1], 3), dtype=np.uint8
+        )
         self.unwrapped.original_obs = None
 
     def resize(self, obs: np.ndarray):
@@ -56,10 +78,10 @@ class NoopResetEnv(gym.Wrapper):
         self.noop_max = noop_max
         self.override_num_noops = None
         self.noop_action = 0
-        assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
+        assert env.unwrapped.get_action_meanings()[0] == "NOOP"
 
     def reset(self, **kwargs):
-        """ Do no-op action for a number of steps in [1, noop_max]."""
+        """Do no-op action for a number of steps in [1, noop_max]."""
         self.env.reset(**kwargs)
         if self.override_num_noops is not None:
             noops = self.override_num_noops
@@ -145,3 +167,32 @@ class MaxAndSkipEnv(gym.Wrapper):
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
+
+
+class MessengerSplitEnv(gym.Wrapper):
+    def __init__(self, env, split, seed=None):
+        gym.Wrapper.__init__(self, env)
+        with open("src/envs/messenger_splits.json") as f:
+            splits = json.load(f)
+        self.split = split
+        self.games = splits[split]
+        self.random = np.random.RandomState(seed)
+
+    def step(self, action):
+        obs, reward, done, info = self.env.step(action)
+        obs = self.wrap_obs(obs, self.entity_order)
+        return obs, reward, done, info
+
+    def reset(self):
+        # entities = self.games[self.random.randint(0, len(self.games))]
+        entities = self.games[0]
+        obs, self.manual, self.ground_truth = self.env.reset(
+            split=self.split, entities=entities
+        )
+        self.entity_order = self.random.permutation(3)
+        obs = self.wrap_obs(obs, self.entity_order)
+        return obs
+
+    def wrap_obs(self, obs, entity_order):
+        obs["entities"] = obs["entities"][..., entity_order]
+        return np.concatenate((obs["entities"], obs["avatar"]), axis=-1)

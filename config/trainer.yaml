@@ -6,9 +6,15 @@ defaults:
   - env: default
   - datasets: default
 
+exp_dir: null
+
+hydra:
+  run:
+    dir: outputs/${exp_dir}
+
 wandb:
   mode: online
-  project: iris
+  project: messenger-iris
   entity: null
   name: null
   group: null
@@ -40,6 +46,7 @@ collection:
       temperature: 1.0
       num_steps: 200
       burn_in: ${training.actor_critic.burn_in}
+      use_original_obs: ${actor_critic.use_original_obs}
   test:
     num_envs: 8
     num_episodes_to_save: ${collection.train.num_episodes_to_save}
@@ -49,6 +56,7 @@ collection:
       temperature: 0.5
       num_episodes: 16
       burn_in: ${training.actor_critic.burn_in}
+      use_original_obs: ${actor_critic.use_original_obs}
 
 training:
   should: True

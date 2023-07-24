@@ -1,0 +1,14 @@
+train:
+  _target_: envs.make_messenger
+  id: 'msgr-custom-v2'
+  max_episode_steps: 32
+  seed: ${...common.seed}
+  split: 'train_games'
+
+test:
+  _target_: ${..train._target_}
+  id: ${..train.id}
+  max_episode_steps: 32
+  split: 'train_games'
+
+keymap: messenger

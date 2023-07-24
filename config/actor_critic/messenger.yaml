@@ -1,0 +1,6 @@
+use_original_obs: False
+net:
+  input_shape: [4, 10, 10]
+  encoder_class: MessengerEncoder
+  hidden_dim: 512
+  embed_dim: 32

@@ -8,3 +8,4 @@ psutil==5.8.0
 pygame==2.1.2
 tqdm==4.62.3
 wandb==0.12.7
+vgdl @ git+https://github.com/ahjwang/py-vgdl
