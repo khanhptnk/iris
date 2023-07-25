@@ -15,7 +15,8 @@ class MessageType(Enum):
     STEP = 2
     STEP_RETURN = 3
     CLOSE = 4
-
+    GET_ATTR = 5
+    ATTR_RETURN = 6
 
 @dataclass
 class Message:
@@ -42,6 +43,8 @@ def child_env(child_id: int, env_fn: Callable, child_conn: Connection) -> None:
         elif message_type == MessageType.CLOSE:
             child_conn.close()
             return
+        elif message_type == MessageType.GET_ATTR:
+            child_conn.send(Message(MessageType.ATTR_RETURN, getattr(env, content)))
         else:
             raise NotImplementedError
 
@@ -98,3 +101,9 @@ class MultiProcessEnv(DoneTrackerEnv):
             p.join()
         for parent_conn in self.parent_conns:
             parent_conn.close()
+
+    def get_attr(self, name):
+        for parent_conn in self.parent_conns:
+            parent_conn.send(Message(MessageType.GET_ATTR, name))
+        content = self._receive(check_type=MessageType.ATTR_RETURN)
+        return content

@@ -32,3 +32,6 @@ class SingleProcessEnv(DoneTrackerEnv):
 
     def close(self) -> None:
         self.env.close()
+
+    def get_attr(self, name):
+        return [getattr(self.env, name)]

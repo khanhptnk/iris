@@ -14,7 +14,7 @@ Batch = Dict[str, torch.Tensor]
 
 class EpisodesDataset:
     def __init__(
-        self, max_num_episodes: Optional[int] = None, name: Optional[str] = None
+        self, seed: int = None, max_num_episodes: Optional[int] = None, name: Optional[str] = None
     ) -> None:
         self.max_num_episodes = max_num_episodes
         self.name = name if name is not None else "dataset"
@@ -22,6 +22,7 @@ class EpisodesDataset:
         self.episodes = deque()
         self.episode_id_to_queue_idx = dict()
         self.newly_modified_episodes, self.newly_deleted_episodes = set(), set()
+        self.random = random.Random(seed + 764)
 
     def __len__(self) -> int:
         return len(self.episodes)
@@ -102,17 +103,17 @@ class EpisodesDataset:
             ]
             weights = [w / s for (w, s) in zip(weights, sizes) for _ in range(s)]
 
-        sampled_episodes = random.choices(
+        sampled_episodes = self.random.choices(
             self.episodes, k=batch_num_samples, weights=weights
         )
 
         sampled_episodes_segments = []
         for sampled_episode in sampled_episodes:
             if sample_from_start:
-                start = random.randint(0, len(sampled_episode) - 1)
+                start = self.random.randint(0, len(sampled_episode) - 1)
                 stop = start + sequence_length
             else:
-                stop = random.randint(1, len(sampled_episode))
+                stop = self.random.randint(1, len(sampled_episode))
                 start = stop - sequence_length
             sampled_episodes_segments.append(
                 sampled_episode.segment(start, stop, should_pad=True)
@@ -168,8 +169,8 @@ class EpisodesDatasetRamMonitoring(EpisodesDataset):
     Warning: % looks at system wide RAM usage while G looks only at process RAM usage.
     """
 
-    def __init__(self, max_ram_usage: str, name: Optional[str] = None) -> None:
-        super().__init__(max_num_episodes=None, name=name)
+    def __init__(self, max_ram_usage: str, seed: int = None, name: Optional[str] = None) -> None:
+        super().__init__(seed=seed, max_num_episodes=None, name=name)
         self.max_ram_usage = max_ram_usage
         self.num_steps = 0
         self.max_num_steps = None

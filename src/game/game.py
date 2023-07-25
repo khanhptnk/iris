@@ -161,3 +161,61 @@ class Game:
         np.save(self.record_dir / timestamp, frames)
         make_video(self.record_dir / f"{timestamp}.mp4", fps=15, frames=frames)
         print(f"Saved recording {timestamp}.")
+
+
+class MessengerGame:
+
+    def __init__(
+        self,
+        env: Union[gym.Env, WorldModelEnv],
+        keymap_name: str,
+        size: Tuple[int, int],
+        fps: int,
+        verbose: bool,
+        record_mode: bool,
+    ):
+
+        self.env = env
+        self.keymap, self.action_names = get_keymap_and_action_names(keymap_name)
+        self.verbose = verbose
+
+    def run(self):
+
+        ob = self.env.reset()
+        self.display(ob)
+
+        should_stop = False
+
+        while not should_stop:
+
+            key = input()
+
+            action = self.keymap[key]
+            ob, reward, done, info = self.env.step(action)
+
+            if self.verbose:
+                print(f"Action: {self.action_names[action]}")
+                print(
+                    f"Reward: {reward if isinstance(reward, float) else float(reward): .2f}",
+                )
+                print(f"Done: {done}")
+
+            self.display(ob)
+
+            if done:
+                break
+
+        pygame.quit()
+
+    def display(self, ob):
+        if ob.shape[0] == 1:
+            ob = ob[0]
+        print()
+        for triplet in self.env.ground_truth:
+            print(self.env.entity_ids[triplet[0]], *triplet[1:])
+        if ob.shape[-1] == 4:
+            print(ob.sum(-1))
+        else:
+            assert ob.shape[0] == 4
+            print(ob.sum(0))
+

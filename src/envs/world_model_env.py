@@ -150,3 +150,11 @@ class WorldModelEnv:
     def render(self):
         assert self.obs_tokens.shape == (1, self.num_observations_tokens)
         return self.render_batch()[0]
+
+    @property
+    def ground_truth(self):
+        return self.env.ground_truth
+
+    @property
+    def entity_ids(self):
+        return self.env.entity_ids

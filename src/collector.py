@@ -102,7 +102,7 @@ class Collector:
             observations.append(self.obs)
             obs = torch.FloatTensor(self.obs).to(agent.device).permute(0, 3, 1, 2)
             act = (
-                agent.act(obs, should_sample=should_sample, temperature=temperature)
+                agent.act(obs, should_sample=should_sample, temperature=temperature, env=self.env)
                 .cpu()
                 .numpy()
             )

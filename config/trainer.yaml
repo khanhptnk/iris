@@ -16,7 +16,7 @@ wandb:
   mode: online
   project: messenger-iris
   entity: null
-  name: null
+  name: ${exp_dir}
   group: null
   tags: null
   notes: null
@@ -34,6 +34,10 @@ common:
   seed: 0
   sequence_length: ${world_model.max_blocks}
   resume: False # set by resume.sh script only.
+
+agent:
+  _target_: Agent
+  seed: ${common.seed}
 
 collection:
   train:

@@ -1,3 +1,4 @@
+import os
 from functools import partial
 from pathlib import Path
 
@@ -8,7 +9,7 @@ import torch
 
 from agent import Agent
 from envs import SingleProcessEnv, WorldModelEnv
-from game import AgentEnv, EpisodeReplayEnv, Game
+from game import AgentEnv, EpisodeReplayEnv, MessengerGame
 from models.actor_critic import ActorCritic
 from models.world_model import WorldModel
 
@@ -20,6 +21,7 @@ def main(cfg: DictConfig):
         "episode_replay",
         "agent_in_env",
         "agent_in_world_model",
+        "play_in_env",
         "play_in_world_model",
     )
 
@@ -47,7 +49,7 @@ def main(cfg: DictConfig):
             config=instantiate(cfg.world_model),
         )
         actor_critic = ActorCritic(
-            **cfg.actor_critic, act_vocab_size=test_env.num_actions
+            test_env.num_actions, cfg.actor_critic
         )
         agent = Agent(tokenizer, world_model, actor_critic).to(device)
         agent.load(Path("checkpoints/last.pt"), device)
@@ -59,6 +61,10 @@ def main(cfg: DictConfig):
                 device=device,
                 env=env_fn(),
             )
+            keymap = cfg.env.keymap
+
+        elif cfg.mode == "play_in_env":
+            env = env_fn()
             keymap = cfg.env.keymap
 
         elif cfg.mode == "agent_in_env":
@@ -79,7 +85,7 @@ def main(cfg: DictConfig):
             env = AgentEnv(agent, wm_env, cfg.env.keymap, do_reconstruction=False)
             keymap = "empty"
 
-    game = Game(
+    game = MessengerGame(
         env,
         keymap_name=keymap,
         size=size,

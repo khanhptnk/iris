@@ -12,6 +12,9 @@ def get_keymap_and_action_names(name):
     if name == "atari":
         return ATARI_KEYMAP, ATARI_ACTION_NAMES
 
+    if name == 'messenger':
+        return MESSENGER_KEYMAP, MESSENGER_ACTION_NAMES
+
     assert name.startswith("atari/")
     env_id = name.split("atari/")[1]
     action_names = [x.lower() for x in gym.make(env_id).get_action_meanings()]
@@ -61,6 +64,22 @@ ATARI_KEYMAP = {
     pygame.K_y: 15,
     pygame.K_j: 16,
     pygame.K_h: 17,
+}
+
+MESSENGER_ACTION_NAMES = [
+    "up",
+    "down",
+    "left",
+    "right",
+    "stay",
+]
+
+MESSENGER_KEYMAP = {
+    'w' : 0,
+    's' : 1,
+    'a' : 2,
+    'd' : 3,
+    'q' : 4
 }
 
 EPISODE_REPLAY_ACTION_NAMES = [

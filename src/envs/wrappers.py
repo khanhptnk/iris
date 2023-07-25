@@ -2,22 +2,26 @@
 Credits to https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
 """
 
+import os
 from typing import Tuple
 import json
 import random
 import numpy as np
 
 import messenger
+from messenger.envs.config import NPCS
 import gym
 import numpy as np
 from PIL import Image
+from hydra.utils import get_original_cwd, to_absolute_path
+from pathlib import Path
 
 
 def make_messenger(id, max_episode_steps=None, split=None, seed=None):
     env = gym.make(id, shuffle_obs=False)
     if max_episode_steps is not None:
         env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
-    env = MessengerSplitEnv(env, split, seed)
+    env = MessengerSplitEnv(env, split, seed=seed)
     return env
 
 
@@ -170,13 +174,17 @@ class MaxAndSkipEnv(gym.Wrapper):
 
 
 class MessengerSplitEnv(gym.Wrapper):
+
+    INTENTIONS = ['random', 'survive', 'get_message', 'go_to_goal']
+
     def __init__(self, env, split, seed=None):
         gym.Wrapper.__init__(self, env)
-        with open("src/envs/messenger_splits.json") as f:
+        with open(Path(get_original_cwd()) / 'src/envs/messenger_splits.json') as f:
             splits = json.load(f)
         self.split = split
         self.games = splits[split]
-        self.random = np.random.RandomState(seed)
+        self.entity_ids = {entity.name: entity.id for entity in NPCS}
+        self.random = np.random.RandomState(seed + 543)
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
@@ -184,7 +192,10 @@ class MessengerSplitEnv(gym.Wrapper):
         return obs, reward, done, info
 
     def reset(self):
-        # entities = self.games[self.random.randint(0, len(self.games))]
+        # This is just for setting a goal for the rule-based policy
+        self.intention = self.random.choice(self.INTENTIONS)
+
+        #entities = self.games[self.random.randint(0, len(self.games))]
         entities = self.games[0]
         obs, self.manual, self.ground_truth = self.env.reset(
             split=self.split, entities=entities

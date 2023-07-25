@@ -66,7 +66,7 @@ class WorldModel(nn.Module):
             head_module=nn.Sequential(
                 nn.Linear(config.embed_dim, config.embed_dim),
                 nn.ReLU(),
-                nn.Linear(config.embed_dim, 3),
+                nn.Linear(config.embed_dim, 5),
             ),
         )
 
@@ -111,10 +111,20 @@ class WorldModel(nn.Module):
     def compute_loss(
         self, batch: Batch, tokenizer: Tokenizer, **kwargs: Any
     ) -> LossWithIntermediateLosses:
+
+        #print(batch['observations'][0][0].sum(0))
+        #input()
+
         with torch.no_grad():
             obs_tokens = tokenizer.encode(
                 batch["observations"], should_preprocess=True
             ).tokens  # (BL, K)
+
+        #print(obs_tokens[0][0])
+        #print(obs_tokens[0][0] - 4)
+        #print(obs_tokens[0][0] - 21)
+        #print(obs_tokens[0][0] - 31)
+        #input()
 
         act_tokens = rearrange(batch["actions"], "b l -> b l 1")
         tokens = rearrange(
@@ -160,8 +170,8 @@ class WorldModel(nn.Module):
             "b t k -> b (t k)",
         )[:, 1:]
         labels_rewards = (
-            (rewards.sign() + 1).masked_fill(mask_fill, -100).long()
-        )  # Rewards clipped to {-1, 0, 1}
+            ((rewards + 1).long() * 2).masked_fill(mask_fill, -100)
+        )  # TODO: this is currently specific to Messenger
         labels_ends = ends.masked_fill(mask_fill, -100)
         return (
             labels_observations.reshape(-1),

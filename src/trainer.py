@@ -110,7 +110,9 @@ class Trainer:
             config=instantiate(cfg.world_model),
         )
         actor_critic = ActorCritic(env.num_actions, cfg.actor_critic)
-        self.agent = Agent(tokenizer, world_model, actor_critic).to(self.device)
+        #self.agent = Agent(tokenizer, world_model, actor_critic).to(self.device)
+        self.agent = instantiate(cfg.agent, tokenizer, world_model, actor_critic).to(self.device)
+
         print(
             f"{sum(p.numel() for p in self.agent.tokenizer.parameters())} parameters in agent.tokenizer"
         )
@@ -254,6 +256,7 @@ class Trainer:
                     sampling_weights,
                     sample_from_start,
                 )
+
                 batch = self._to_device(batch)
 
                 losses = component.compute_loss(batch, **kwargs_loss) / grad_acc_steps

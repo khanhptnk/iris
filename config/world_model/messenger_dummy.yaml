@@ -1,6 +1,6 @@
 _target_: models.TransformerConfig
 tokens_per_block: 17
-max_blocks: 32
+max_blocks: 20
 attention: 'causal'
 num_layers: 4
 num_heads: 4

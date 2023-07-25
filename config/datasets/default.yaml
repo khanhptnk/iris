@@ -1,8 +1,10 @@
 train:
   _target_: dataset.EpisodesDatasetRamMonitoring
-  max_ram_usage: 30G
+  max_ram_usage: 10G
   name: train_dataset
+  seed: ${...common.seed}
 test:
   _target_: dataset.EpisodesDataset
   max_num_episodes: null
   name: test_dataset
+  seed: ${...common.seed}
