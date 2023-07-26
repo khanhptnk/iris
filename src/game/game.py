@@ -164,7 +164,6 @@ class Game:
 
 
 class MessengerGame:
-
     def __init__(
         self,
         env: Union[gym.Env, WorldModelEnv],
@@ -174,20 +173,17 @@ class MessengerGame:
         verbose: bool,
         record_mode: bool,
     ):
-
         self.env = env
         self.keymap, self.action_names = get_keymap_and_action_names(keymap_name)
         self.verbose = verbose
 
     def run(self):
-
         ob = self.env.reset()
         self.display(ob)
 
         should_stop = False
 
         while not should_stop:
-
             key = input()
 
             action = self.keymap[key]
@@ -218,4 +214,3 @@ class MessengerGame:
         else:
             assert ob.shape[0] == 4
             print(ob.sum(0))
-

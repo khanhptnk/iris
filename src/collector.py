@@ -79,12 +79,8 @@ class Collector:
                 .to(agent.device)
             )
             if not use_original_obs:
-                burnin_obs = torch.clamp(
-                    agent.tokenizer.encode_decode(
-                        burnin_obs, should_preprocess=True, should_postprocess=True
-                    ),
-                    0,
-                    1,
+                burnin_obs = agent.tokenizer.encode_decode(
+                    burnin_obs, should_preprocess=True, should_postprocess=True
                 )
 
         agent.actor_critic.reset(
@@ -101,9 +97,14 @@ class Collector:
         while not should_stop(steps, episodes):
             observations.append(self.obs)
             obs = torch.FloatTensor(self.obs).to(agent.device).permute(0, 3, 1, 2)
-            #print(obs[0].sum(0))
+            # print(obs[0].sum(0))
             act = (
-                agent.act(obs, should_sample=should_sample, temperature=temperature, env=self.env)
+                agent.act(
+                    obs,
+                    should_sample=should_sample,
+                    temperature=temperature,
+                    env=self.env,
+                )
                 .cpu()
                 .numpy()
             )
@@ -113,9 +114,9 @@ class Collector:
 
             self.obs, reward, done, _ = self.env.step(act)
 
-            #print(act, reward, done)
-            #print(self.env.get_attr('intention'))
-            #input()
+            # print(act, reward, done)
+            # print(self.env.get_attr('intention'))
+            # input()
 
             actions.append(act)
             rewards.append(reward)

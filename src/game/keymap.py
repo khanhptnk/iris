@@ -12,7 +12,7 @@ def get_keymap_and_action_names(name):
     if name == "atari":
         return ATARI_KEYMAP, ATARI_ACTION_NAMES
 
-    if name == 'messenger':
+    if name == "messenger":
         return MESSENGER_KEYMAP, MESSENGER_ACTION_NAMES
 
     assert name.startswith("atari/")
@@ -74,13 +74,7 @@ MESSENGER_ACTION_NAMES = [
     "stay",
 ]
 
-MESSENGER_KEYMAP = {
-    'w' : 0,
-    's' : 1,
-    'a' : 2,
-    'd' : 3,
-    'q' : 4
-}
+MESSENGER_KEYMAP = {"w": 0, "s": 1, "a": 2, "d": 3, "q": 4}
 
 EPISODE_REPLAY_ACTION_NAMES = [
     "noop",

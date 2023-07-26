@@ -110,8 +110,10 @@ class Trainer:
             config=instantiate(cfg.world_model),
         )
         actor_critic = ActorCritic(env.num_actions, cfg.actor_critic)
-        #self.agent = Agent(tokenizer, world_model, actor_critic).to(self.device)
-        self.agent = instantiate(cfg.agent, tokenizer, world_model, actor_critic).to(self.device)
+        # self.agent = Agent(tokenizer, world_model, actor_critic).to(self.device)
+        self.agent = instantiate(cfg.agent, tokenizer, world_model, actor_critic).to(
+            self.device
+        )
 
         print(
             f"{sum(p.numel() for p in self.agent.tokenizer.parameters())} parameters in agent.tokenizer"

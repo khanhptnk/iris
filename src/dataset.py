@@ -14,7 +14,10 @@ Batch = Dict[str, torch.Tensor]
 
 class EpisodesDataset:
     def __init__(
-        self, seed: int = None, max_num_episodes: Optional[int] = None, name: Optional[str] = None
+        self,
+        seed: int = None,
+        max_num_episodes: Optional[int] = None,
+        name: Optional[str] = None,
     ) -> None:
         self.max_num_episodes = max_num_episodes
         self.name = name if name is not None else "dataset"
@@ -169,7 +172,9 @@ class EpisodesDatasetRamMonitoring(EpisodesDataset):
     Warning: % looks at system wide RAM usage while G looks only at process RAM usage.
     """
 
-    def __init__(self, max_ram_usage: str, seed: int = None, name: Optional[str] = None) -> None:
+    def __init__(
+        self, max_ram_usage: str, seed: int = None, name: Optional[str] = None
+    ) -> None:
         super().__init__(seed=seed, max_num_episodes=None, name=name)
         self.max_ram_usage = max_ram_usage
         self.num_steps = 0

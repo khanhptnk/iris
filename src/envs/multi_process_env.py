@@ -18,6 +18,7 @@ class MessageType(Enum):
     GET_ATTR = 5
     ATTR_RETURN = 6
 
+
 @dataclass
 class Message:
     type: MessageType
@@ -68,7 +69,9 @@ class MultiProcessEnv(DoneTrackerEnv):
             p.start()
 
     def should_reset(self) -> bool:
-        return ((self.num_envs_done + self.num_envs_truncated) / self.num_envs) >= self.should_wait_num_envs_ratio
+        return (
+            (self.num_envs_done + self.num_envs_truncated) / self.num_envs
+        ) >= self.should_wait_num_envs_ratio
 
     def _receive(self, check_type: Optional[MessageType] = None) -> List[Any]:
         messages = [parent_conn.recv() for parent_conn in self.parent_conns]
@@ -110,5 +113,5 @@ class MultiProcessEnv(DoneTrackerEnv):
 
     @property
     def num_envs_truncated(self):
-        truncated = self.get_attr('truncated')
+        truncated = self.get_attr("truncated")
         return sum(map(int, truncated))

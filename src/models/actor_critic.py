@@ -205,14 +205,10 @@ class ActorCritic(nn.Module):
         all_observations = []
 
         burnin_observations = (
-            torch.clamp(
-                tokenizer.encode_decode(
-                    initial_observations[:, :-1],
-                    should_preprocess=True,
-                    should_postprocess=True,
-                ),
-                0,
-                1,
+            tokenizer.encode_decode(
+                initial_observations[:, :-1],
+                should_preprocess=True,
+                should_postprocess=True,
             )
             if initial_observations.size(1) > 1
             else None

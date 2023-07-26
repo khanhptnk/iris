@@ -87,7 +87,7 @@ class AtariEncoder(nn.Module):
 class MessengerEncoder(nn.Module):
     def __init__(self, input_shape: int, embed_dim: int = None):
         super().__init__()
-        n_entities = 17
+        self.n_entities = 17
         n_channels = input_shape[0]
         resnet_cfg = {
             "kernel": [3, 3, 3],
@@ -98,13 +98,15 @@ class MessengerEncoder(nn.Module):
             "out_channels": [64, 64, 64],
         }
         assert embed_dim is not None
-        self.embedder = nn.Embedding(n_entities, embed_dim)
+        self.embedder = nn.Embedding(self.n_entities, embed_dim)
         self.resnet = ResNetEncoder(resnet_cfg)
 
     def forward(
         self, inputs: torch.FloatTensor, mask_padding: Optional[torch.BoolTensor] = None
     ) -> torch.FloatTensor:
-        assert inputs.min() >= 0 and inputs.max() < 17
+        assert inputs.min() >= 0 and inputs.max() < self.n_entities
+        # inputs must be all integers
+        assert (inputs.long() == inputs).all()
         inputs = inputs.long().permute(0, 2, 3, 1)
         x = self.embedder(inputs)
         x = x.view(*x.shape[:3], -1).permute(0, 3, 1, 2)

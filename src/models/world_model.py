@@ -111,20 +111,19 @@ class WorldModel(nn.Module):
     def compute_loss(
         self, batch: Batch, tokenizer: Tokenizer, **kwargs: Any
     ) -> LossWithIntermediateLosses:
-
-        #print(batch['observations'][0][0].sum(0))
-        #input()
+        # print(batch['observations'][0][0].sum(0))
+        # input()
 
         with torch.no_grad():
             obs_tokens = tokenizer.encode(
                 batch["observations"], should_preprocess=True
             ).tokens  # (BL, K)
 
-        #print(obs_tokens[0][0])
-        #print(obs_tokens[0][0] - 4)
-        #print(obs_tokens[0][0] - 21)
-        #print(obs_tokens[0][0] - 31)
-        #input()
+        # print(obs_tokens[0][0])
+        # print(obs_tokens[0][0] - 4)
+        # print(obs_tokens[0][0] - 21)
+        # print(obs_tokens[0][0] - 31)
+        # input()
 
         act_tokens = rearrange(batch["actions"], "b l -> b l 1")
         tokens = rearrange(

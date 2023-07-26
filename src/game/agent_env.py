@@ -28,13 +28,13 @@ class AgentEnv:
 
     def _to_tensor(self, obs: np.ndarray):
         assert isinstance(obs, np.ndarray) and obs.dtype == np.uint8
-        return rearrange(torch.FloatTensor(obs).div(255), "n h w c -> n c h w").to(
+        return rearrange(torch.FloatTensor(obs), "n h w c -> n c h w").to(
             self.agent.device
         )
 
     def _to_array(self, obs: torch.FloatTensor):
         assert obs.ndim == 4 and obs.size(0) == 1
-        return obs[0].mul(255).permute(1, 2, 0).cpu().numpy().astype(np.uint8)
+        return obs[0].permute(1, 2, 0).cpu().numpy().astype(np.uint8)
 
     def reset(self):
         obs = self.env.reset()
@@ -70,12 +70,8 @@ class AgentEnv:
             else self._to_array(self.obs)
         )
         if self.do_reconstruction:
-            rec = torch.clamp(
-                self.agent.tokenizer.encode_decode(
-                    self.obs, should_preprocess=True, should_postprocess=True
-                ),
-                0,
-                1,
+            rec = self.agent.tokenizer.encode_decode(
+                self.obs, should_preprocess=True, should_postprocess=True
             )
             rec = self._to_array(
                 resize(

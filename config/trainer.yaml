@@ -36,7 +36,7 @@ common:
   resume: False # set by resume.sh script only.
 
 agent:
-  _target_: Agent
+  _target_: agent.Agent
   seed: ${common.seed}
 
 collection:

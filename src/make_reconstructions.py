@@ -49,7 +49,7 @@ def check_batch(batch):
 
 def tensor_to_np_frames(inputs):
     # check_float_btw_0_1(inputs)
-    return inputs.mul(255).cpu().numpy().astype(np.uint8)
+    return inputs.cpu().numpy().astype(np.uint8)
 
 
 def check_float_btw_0_1(inputs):
@@ -73,4 +73,4 @@ def reconstruct_through_tokenizer(inputs, tokenizer):
     reconstructions = tokenizer.encode_decode(
         inputs, should_preprocess=True, should_postprocess=True
     )
-    return torch.clamp(reconstructions, 0, 1)
+    return reconstructions

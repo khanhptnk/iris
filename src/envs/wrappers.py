@@ -174,7 +174,6 @@ class MaxAndSkipEnv(gym.Wrapper):
 
 
 class TimeLimitEnv(gym.Wrapper):
-
     def __init__(
         self,
         env: gym.Env,
@@ -204,12 +203,11 @@ class TimeLimitEnv(gym.Wrapper):
 
 
 class MessengerSplitEnv(gym.Wrapper):
-
-    INTENTIONS = ['random', 'suicide', 'survive', 'get_message', 'go_to_goal']
+    INTENTIONS = ["random", "suicide", "survive", "get_message", "go_to_goal"]
 
     def __init__(self, env, split, seed=None):
         gym.Wrapper.__init__(self, env)
-        with open(Path(get_original_cwd()) / 'src/envs/messenger_splits.json') as f:
+        with open(Path(get_original_cwd()) / "src/envs/messenger_splits.json") as f:
             splits = json.load(f)
         self.split = split
         self.games = splits[split]
@@ -225,7 +223,7 @@ class MessengerSplitEnv(gym.Wrapper):
         # This is just for setting a goal for the rule-based policy
         self.intention = self.random.choice(self.INTENTIONS)
 
-        #entities = self.games[self.random.randint(0, len(self.games))]
+        # entities = self.games[self.random.randint(0, len(self.games))]
         entities = self.games[0]
         obs, self.manual, self.ground_truth = self.env.reset(
             split=self.split, entities=entities

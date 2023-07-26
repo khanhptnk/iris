@@ -15,7 +15,11 @@ from envs import SingleProcessEnv, MultiProcessEnv
 
 class Agent(nn.Module):
     def __init__(
-        self, tokenizer: Tokenizer, world_model: WorldModel, actor_critic: ActorCritic, seed: int = None
+        self,
+        tokenizer: Tokenizer,
+        world_model: WorldModel,
+        actor_critic: ActorCritic,
+        seed: int = None,
     ):
         super().__init__()
         self.tokenizer = tokenizer
@@ -54,17 +58,13 @@ class Agent(nn.Module):
         obs: torch.FloatTensor,
         should_sample: bool = True,
         temperature: float = 1.0,
-        env: Union[SingleProcessEnv, MultiProcessEnv] = None
+        env: Union[SingleProcessEnv, MultiProcessEnv] = None,
     ) -> torch.LongTensor:
         input_ac = (
             obs
             if self.actor_critic.use_original_obs
-            else torch.clamp(
-                self.tokenizer.encode_decode(
-                    obs, should_preprocess=True, should_postprocess=True
-                ),
-                0,
-                1,
+            else self.tokenizer.encode_decode(
+                obs, should_preprocess=True, should_postprocess=True
             )
         )
         logits_actions = self.actor_critic(input_ac).logits_actions[:, -1] / temperature
@@ -77,7 +77,6 @@ class Agent(nn.Module):
 
 
 class MessengerRuleBasedAgent(Agent):
-
     WITH_MESSAGE_ID = 16
     CUSTOM_TO_MESSENGER_ENTITY = {
         "robot": "robot",
@@ -100,37 +99,37 @@ class MessengerRuleBasedAgent(Agent):
         obs: torch.FloatTensor,
         should_sample: bool = True,
         temperature: float = 1.0,
-        env: Union[SingleProcessEnv, MultiProcessEnv] = None
+        env: Union[SingleProcessEnv, MultiProcessEnv] = None,
     ) -> torch.LongTensor:
-
         device = obs.device
         obs = obs.permute(0, 2, 3, 1).cpu().numpy()
-        self.ENTITY_IDS = env.get_attr('entity_ids')[0]
-        parsed_manuals = env.get_attr('ground_truth')
-        intentions = env.get_attr('intention')
+        self.ENTITY_IDS = env.get_attr("entity_ids")[0]
+        parsed_manuals = env.get_attr("ground_truth")
+        intentions = env.get_attr("intention")
 
         actions = []
         for i in range(obs.shape[0]):
-            actions.append(self.compute_action(obs[i], parsed_manuals[i], intentions[i]))
+            actions.append(
+                self.compute_action(obs[i], parsed_manuals[i], intentions[i])
+            )
         actions = torch.tensor(actions).to(device)
 
-        #for e in parsed_manuals[0]:
+        # for e in parsed_manuals[0]:
         #    print(self.ENTITY_IDS[e[0]], e[1], e[2])
-        #print(intentions, actions)
+        # print(intentions, actions)
 
         return actions
 
     def compute_action(self, obs, parsed_manuals, intention):
-
-        if intention == 'random':
+        if intention == "random":
             return self.random.choice(range(5))
 
-        if intention == 'survive':
+        if intention == "survive":
             avatar_id = self.get_avatar_id(obs)
             a_pos = self.get_position_by_id(obs, avatar_id)
-            enemy_id = self.get_entity_id_by_role(parsed_manuals, 'enemy')
+            enemy_id = self.get_entity_id_by_role(parsed_manuals, "enemy")
             e_pos = self.get_position_by_id(obs, enemy_id)
-            goal_id = self.get_entity_id_by_role(parsed_manuals, 'goal')
+            goal_id = self.get_entity_id_by_role(parsed_manuals, "goal")
             g_pos = self.get_position_by_id(obs, goal_id)
             # if messaged has been obtained, don't care about hitting goal
             if avatar_id == self.WITH_MESSAGE_ID:
@@ -138,35 +137,35 @@ class MessengerRuleBasedAgent(Agent):
             # choose action that takes avatar furthest from the enemy
             return self.get_best_action_for_surviving(a_pos, e_pos, g_pos)
 
-        if intention == 'suicide':
+        if intention == "suicide":
             avatar_id = self.get_avatar_id(obs)
             a_pos = self.get_position_by_id(obs, avatar_id)
-            enemy_id = self.get_entity_id_by_role(parsed_manuals, 'enemy')
+            enemy_id = self.get_entity_id_by_role(parsed_manuals, "enemy")
             t_pos = self.get_position_by_id(obs, enemy_id)
             # choose action that takes avatar closest to the goal
             return self.get_best_action_for_chasing(a_pos, t_pos)
 
-        if intention == 'get_message':
+        if intention == "get_message":
             avatar_id = self.get_avatar_id(obs)
             # if message has been obtained, act randomly
             if avatar_id == self.WITH_MESSAGE_ID:
-                return self.compute_action(obs, parsed_manuals, 'random')
+                return self.compute_action(obs, parsed_manuals, "random")
             a_pos = self.get_position_by_id(obs, avatar_id)
-            message_id = self.get_entity_id_by_role(parsed_manuals, 'message')
+            message_id = self.get_entity_id_by_role(parsed_manuals, "message")
             t_pos = self.get_position_by_id(obs, message_id)
             # choose action that takes avatar closest to the goal
             return self.get_best_action_for_chasing(a_pos, t_pos)
 
-        if intention == 'go_to_goal':
+        if intention == "go_to_goal":
             avatar_id = self.get_avatar_id(obs)
             a_pos = self.get_position_by_id(obs, avatar_id)
             # if message has been obtained, go to goal
             if avatar_id == self.WITH_MESSAGE_ID:
-                goal_id = self.get_entity_id_by_role(parsed_manuals, 'goal')
+                goal_id = self.get_entity_id_by_role(parsed_manuals, "goal")
                 t_pos = self.get_position_by_id(obs, goal_id)
             # else go to message
             else:
-                message_id = self.get_entity_id_by_role(parsed_manuals, 'message')
+                message_id = self.get_entity_id_by_role(parsed_manuals, "message")
                 t_pos = self.get_position_by_id(obs, message_id)
             # choose action that takes avatar closest to the goal or message
             return self.get_best_action_for_chasing(a_pos, t_pos)
@@ -236,4 +235,3 @@ class MessengerRuleBasedAgent(Agent):
 
     def get_distance(self, x, y):
         return abs(x[0] - y[0]) + abs(x[1] - y[1])
-
