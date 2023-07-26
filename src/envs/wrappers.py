@@ -3,7 +3,7 @@ Credits to https://github.com/openai/baselines/blob/master/baselines/common/atar
 """
 
 import os
-from typing import Tuple
+from typing import Tuple, Optional
 import json
 import random
 import numpy as np
@@ -20,7 +20,7 @@ from pathlib import Path
 def make_messenger(id, max_episode_steps=None, split=None, seed=None):
     env = gym.make(id, shuffle_obs=False)
     if max_episode_steps is not None:
-        env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
+        env = TimeLimitEnv(env, max_episode_steps=max_episode_steps)
     env = MessengerSplitEnv(env, split, seed=seed)
     return env
 
@@ -173,9 +173,39 @@ class MaxAndSkipEnv(gym.Wrapper):
         return self.env.reset(**kwargs)
 
 
+class TimeLimitEnv(gym.Wrapper):
+
+    def __init__(
+        self,
+        env: gym.Env,
+        max_episode_steps: Optional[int] = None,
+    ):
+        super().__init__(env)
+        if max_episode_steps is None and self.env.spec is not None:
+            max_episode_steps = env.spec.max_episode_steps
+        if self.env.spec is not None:
+            self.env.spec.max_episode_steps = max_episode_steps
+        self._max_episode_steps = max_episode_steps
+        self._elapsed_steps = None
+
+    def step(self, action):
+        observation, reward, done, info = self.env.step(action)
+        self._elapsed_steps += 1
+
+        if self._elapsed_steps >= self._max_episode_steps:
+            self.truncated = True
+
+        return observation, reward, done, info
+
+    def reset(self, **kwargs):
+        self._elapsed_steps = 0
+        self.truncated = False
+        return self.env.reset(**kwargs)
+
+
 class MessengerSplitEnv(gym.Wrapper):
 
-    INTENTIONS = ['random', 'survive', 'get_message', 'go_to_goal']
+    INTENTIONS = ['random', 'suicide', 'survive', 'get_message', 'go_to_goal']
 
     def __init__(self, env, split, seed=None):
         gym.Wrapper.__init__(self, env)

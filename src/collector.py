@@ -101,6 +101,7 @@ class Collector:
         while not should_stop(steps, episodes):
             observations.append(self.obs)
             obs = torch.FloatTensor(self.obs).to(agent.device).permute(0, 3, 1, 2)
+            #print(obs[0].sum(0))
             act = (
                 agent.act(obs, should_sample=should_sample, temperature=temperature, env=self.env)
                 .cpu()
@@ -111,6 +112,10 @@ class Collector:
                 act = self.heuristic.act(obs).cpu().numpy()
 
             self.obs, reward, done, _ = self.env.step(act)
+
+            #print(act, reward, done)
+            #print(self.env.get_attr('intention'))
+            #input()
 
             actions.append(act)
             rewards.append(reward)

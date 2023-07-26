@@ -51,7 +51,7 @@ def main(cfg: DictConfig):
         actor_critic = ActorCritic(
             test_env.num_actions, cfg.actor_critic
         )
-        agent = Agent(tokenizer, world_model, actor_critic).to(device)
+        agent = Agent(tokenizer, world_model, actor_critic, seed=cfg.common.seed).to(device)
         agent.load(Path("checkpoints/last.pt"), device)
 
         if cfg.mode == "play_in_world_model":

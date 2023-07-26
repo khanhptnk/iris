@@ -12,7 +12,7 @@ class SingleProcessEnv(DoneTrackerEnv):
         self.num_actions = self.env.action_space.n
 
     def should_reset(self) -> bool:
-        return self.num_envs_done == 1
+        return self.num_envs_done + self.num_envs_truncated >= 1
 
     def reset(self) -> np.ndarray:
         self.reset_done_tracker()
@@ -35,3 +35,7 @@ class SingleProcessEnv(DoneTrackerEnv):
 
     def get_attr(self, name):
         return [getattr(self.env, name)]
+
+    @property
+    def num_envs_truncated(self):
+        return int(self.env.truncated)

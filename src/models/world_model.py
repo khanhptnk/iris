@@ -170,7 +170,7 @@ class WorldModel(nn.Module):
             "b t k -> b (t k)",
         )[:, 1:]
         labels_rewards = (
-            ((rewards + 1).long() * 2).masked_fill(mask_fill, -100)
+            ((rewards + 1) * 2).masked_fill(mask_fill, -100).long()
         )  # TODO: this is currently specific to Messenger
         labels_ends = ends.masked_fill(mask_fill, -100)
         return (

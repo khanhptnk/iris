@@ -138,6 +138,14 @@ class MessengerRuleBasedAgent(Agent):
             # choose action that takes avatar furthest from the enemy
             return self.get_best_action_for_surviving(a_pos, e_pos, g_pos)
 
+        if intention == 'suicide':
+            avatar_id = self.get_avatar_id(obs)
+            a_pos = self.get_position_by_id(obs, avatar_id)
+            enemy_id = self.get_entity_id_by_role(parsed_manuals, 'enemy')
+            t_pos = self.get_position_by_id(obs, enemy_id)
+            # choose action that takes avatar closest to the goal
+            return self.get_best_action_for_chasing(a_pos, t_pos)
+
         if intention == 'get_message':
             avatar_id = self.get_avatar_id(obs)
             # if message has been obtained, act randomly

@@ -106,8 +106,8 @@ class WorldModelEnv:
                     .cpu()
                     .numpy()
                     .reshape(-1)
-                    - 1
-                )  # (B,)
+
+                ) / 2 - 1  # (B,)
                 done = (
                     Categorical(logits=outputs_wm.logits_ends)
                     .sample()
